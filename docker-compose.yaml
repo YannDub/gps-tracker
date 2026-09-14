@@ -1,0 +1,10 @@
+services:
+  postgres:
+    image: postgis/postgis:latest
+    container_name: gps-postgres
+    environment:
+      POSTGRES_DB: gps
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+    ports:
+      - "5432:5432"
