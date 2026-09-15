@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
 
 @Service
@@ -28,12 +29,16 @@ public class GpsService {
     @Value("${app.geofencing.max-radius-meters}")
     private double maxAllowedRadiusMeters;
 
+    @Value("${app.geofencing.alert-cooldown-minutes}")
+    private long cooldownMinutes;
+
     private final TelegramNotificationService telegramNotificationService;
     private final GpsPositionRepository gpsPositionRepository;
 
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
-    public GpsService(final TelegramNotificationService telegramNotificationService, final GpsPositionRepository gpsPositionRepository) {
+    public GpsService(final TelegramNotificationService telegramNotificationService,
+                      final GpsPositionRepository gpsPositionRepository) {
         this.telegramNotificationService = telegramNotificationService;
         this.gpsPositionRepository = gpsPositionRepository;
     }
@@ -53,13 +58,16 @@ public class GpsService {
         if (isOutside) {
             LOG.warn("Véhicule {} sortie du périmètre autorisé ! (Lat: {}, Lon: {})", payload.id(), payload.lat(), payload.lon());
 
-            telegramNotificationService.sendAlert(
-                    deviceId,
-                    payload.lat(),
-                    payload.lon(),
-                    payload.getSpeedInKmh(),
-                    payload.batt()
-            );
+            final var lastAlert = gpsPositionRepository.findLastAlertTime(deviceId).orElse(Instant.now());
+            if (Duration.between(lastAlert, Instant.now()).toMinutes() >= cooldownMinutes) {
+                telegramNotificationService.sendAlert(
+                        deviceId,
+                        payload.lat(),
+                        payload.lon(),
+                        payload.getSpeedInKmh(),
+                        payload.batt()
+                );
+            }
         } else {
             LOG.warn("Position OK pour {} : véhicule dans le périmètre autorisé", payload.id());
         }

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Optional;
 
 public interface GpsPositionRepository extends JpaRepository<GpsPosition, Integer> {
 
@@ -28,4 +29,10 @@ public interface GpsPositionRepository extends JpaRepository<GpsPosition, Intege
     @Modifying
     @Query("DELETE FROM GpsPosition g WHERE g.recordedAt < :cutOffDate AND g.alertTriggered = false")
     int deleteOldNonAlertPositions(@Param("cutOffDate") Instant cutOffDate);
+
+    @Query("""
+            SELECT MAX(g.recordedAt) FROM GpsPosition g
+            WHERE g.deviceId = :deviceId AND g.alertTriggered = true
+            """)
+    Optional<Instant> findLastAlertTime(@Param("deviceId") String deviceId);
 }
