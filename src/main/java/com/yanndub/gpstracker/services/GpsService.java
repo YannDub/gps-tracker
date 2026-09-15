@@ -3,6 +3,7 @@ package com.yanndub.gpstracker.services;
 import com.yanndub.gpstracker.dto.TraccarPayload;
 import com.yanndub.gpstracker.entities.GpsPosition;
 import com.yanndub.gpstracker.repositories.GpsPositionRepository;
+import jakarta.transaction.Transactional;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
@@ -27,13 +28,17 @@ public class GpsService {
     @Value("${app.geofencing.max-radius-meters}")
     private double maxAllowedRadiusMeters;
 
+    private final TelegramNotificationService telegramNotificationService;
     private final GpsPositionRepository gpsPositionRepository;
+
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
-    public GpsService(final GpsPositionRepository gpsPositionRepository) {
+    public GpsService(final TelegramNotificationService telegramNotificationService, final GpsPositionRepository gpsPositionRepository) {
+        this.telegramNotificationService = telegramNotificationService;
         this.gpsPositionRepository = gpsPositionRepository;
     }
 
+    @Transactional
     public GpsPosition processAndSavePosition(final TraccarPayload payload) {
         final var deviceId = payload.id() == null ? "UNKNOWN_DEVICE" : payload.id();
         final var point = createPoint(payload.lat(), payload.lon());
@@ -47,6 +52,14 @@ public class GpsService {
 
         if (isOutside) {
             LOG.warn("Véhicule {} sortie du périmètre autorisé ! (Lat: {}, Lon: {})", payload.id(), payload.lat(), payload.lon());
+
+            telegramNotificationService.sendAlert(
+                    deviceId,
+                    payload.lat(),
+                    payload.lon(),
+                    payload.getSpeedInKmh(),
+                    payload.batt()
+            );
         } else {
             LOG.warn("Position OK pour {} : véhicule dans le périmètre autorisé", payload.id());
         }
