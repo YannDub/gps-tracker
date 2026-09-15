@@ -2,8 +2,11 @@ package com.yanndub.gpstracker.repositories;
 
 import com.yanndub.gpstracker.entities.GpsPosition;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import java.time.Instant;
 
 public interface GpsPositionRepository extends JpaRepository<GpsPosition, Integer> {
 
@@ -21,4 +24,8 @@ public interface GpsPositionRepository extends JpaRepository<GpsPosition, Intege
             @Param("centerLon") double centerLon,
             @Param("radiusInMeters") double radiusInMeters
     );
+
+    @Modifying
+    @Query("DELETE FROM GpsPosition g WHERE g.recordedAt < :cutOffDate AND g.alertTriggered = false")
+    int deleteOldNonAlertPositions(@Param("cutOffDate") Instant cutOffDate);
 }

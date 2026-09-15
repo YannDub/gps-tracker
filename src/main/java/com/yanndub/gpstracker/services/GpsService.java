@@ -73,7 +73,7 @@ public class GpsService {
         final var recordedAt = payload.timestamp() == null ? Instant.now() : Instant.ofEpochMilli(payload.timestamp() * 1000L);
         gpsPosition.setRecordedAt(recordedAt);
 
-        gpsPosition.setAlertTriggered(false);
+        gpsPosition.setAlertTriggered(isOutside);
 
         return gpsPositionRepository.save(gpsPosition);
     }
