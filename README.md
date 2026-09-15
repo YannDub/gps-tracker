@@ -28,7 +28,7 @@ Ce système permet de recevoir en temps réel les trames GPS d'un véhicule (via
 ## 📂 Architecture du Projet
 
 ```text
-src/main/java/com/example/gpstracker/
+src/main/java/com/yanndub/gpstracker/
 ├── controller/
 │   └── GpsController.java         # Endpoint HTTP d'acquisition des données
 ├── dto/
@@ -54,7 +54,7 @@ Pour envoyer les positions depuis votre smartphone vers le serveur :
 
 # 🗺️ Roadmap & Évolutions à venir
 
-- [ ] **Notification Push** : Intégration d'un Bot Telegram pour l'envoi d'alertes instantanées avec lien Google Maps.
+- [x] **Notification Push** : Intégration d'un Bot Telegram pour l'envoi d'alertes instantanées avec lien Google Maps.
 - [ ] **Dashboard Web** : Interface de suivi en temps réel basée sur Leaflet / OpenStreetMap.
-- [ ] **Rétention de données** : Tâche planifiée (@Scheduled) pour la purge automatique des anciennes trajectoires.
+- [x] **Rétention de données** : Tâche planifiée (@Scheduled) pour la purge automatique des anciennes trajectoires.
 - [ ] **Protocole TCP/OBD** : Support natif des trames binaires Teltonika / Concox via Netty.
