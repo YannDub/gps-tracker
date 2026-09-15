@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>GPS Tracker</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        #header {
+            background-color: #1e293b;
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        #status-card {
+            font-size: 14px;
+        }
+
+        #map {
+            flex: 1;
+            width: 100%;
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .badge-ok { background-color: #22c55e; color: white; }
+        .badge-alert { background-color: #ef4444; color: white; }
+    </style>
+</head>
+<body>
+
+<div id="header">
+    <div>
+        <strong style="font-size: 18px;">📍 GPS Tracker</strong>
+    </div>
+    <div id="status-card">
+        Dernière màj: <span id="last-update">--:--:--</span>
+    </div>
+</div>
+
+<div id="map"></div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script th:inline="javascript">
+    // Paramètres de geofencing depuis le backend
+    const centerLat = [[${defaultLat}]];
+    const centerLng = [[${defaultLng}]];
+    const radiusMeters = [[${defaultRadius}]];
+
+    // Initialisation de la carte
+    const map = L.map('map').setView([centerLat, centerLng], 15);
+
+    // Fond de carte OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // Affichage de la zone de sécurité (Geofence)
+    const geofenceCircle = L.circle([centerLat, centerLng], {
+        color: '#3b82f6',
+        fillColor: '#60a5fa',
+        fillOpacity: 0.15,
+        radius: radiusMeters
+    }).addTo(map);
+
+    let vehicleMarker = null;
+    let polyline = L.polyline([], {color: '#ef4444', weight: 4}).addTo(map);
+
+    // Fonction de rafraîchissement des positions
+    async function fetchPositions() {
+        try {
+            const response = await fetch('/api/positions/latest?limit=50');
+            const positions = await response.json();
+
+            if (positions.length === 0) return;
+
+            // Trier du plus ancien au plus récent pour tracer la ligne correctement
+            positions.reverse();
+
+            const latLngs = positions.map(p => [p.latitude, p.longitude]);
+            polyline.setLatLngs(latLngs);
+
+            // La dernière position connue
+            const latest = positions[positions.length - 1];
+            const latestLatLng = [latest.latitude, latest.longitude];
+
+            if (!vehicleMarker) {
+                vehicleMarker = L.marker(latestLatLng).addTo(map);
+            } else {
+                vehicleMarker.setLatLng(latestLatLng);
+            }
+
+            // Popup d'information
+            const timeStr = new Date(latest.recordedAt).toLocaleTimeString();
+            vehicleMarker.bindPopup(`
+                    <b>Véhicule :</b> ${latest.deviceId}<br>
+                    <b>Vitesse :</b> ${latest.speed ?? 0} km/h<br>
+                    <b>Batterie :</b> ${latest.batteryLevel ?? 0}%<br>
+                    <b>Heure :</b> ${timeStr}
+                `);
+
+            document.getElementById('last-update').innerText = timeStr;
+
+        } catch (err) {
+            console.error("Erreur lors de la récupération des positions :", err);
+        }
+    }
+
+    // Premier chargement + rafraîchissement toutes les 5 secondes
+    fetchPositions();
+    setInterval(fetchPositions, 5000);
+</script>
+</body>
+</html>

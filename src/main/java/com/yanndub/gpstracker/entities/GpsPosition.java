@@ -86,4 +86,12 @@ public class GpsPosition {
     public void setAlertTriggered(final boolean alertTriggered) {
         this.alertTriggered = alertTriggered;
     }
+
+    public double getLongitude() {
+        return location == null ? 0.0 : location.getX();
+    }
+
+    public double getLatitude() {
+        return location == null ? 0.0 : location.getY();
+    }
 }
